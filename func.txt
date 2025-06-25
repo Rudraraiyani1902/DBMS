@@ -1,0 +1,330 @@
+CREATE OR REPLACE FUNCTION update_subcontent_views()
+RETURNS void AS $$
+BEGIN
+    UPDATE Subcontent
+    SET content_views=0;
+    UPDATE subcontent s
+    SET content_views = wh.view_count
+    FROM (
+        SELECT contentID, subcontentID, COUNT(UserID) AS view_count
+        FROM Content_Watched_by_User
+        GROUP BY contentID, subcontentID
+    ) AS wh
+    WHERE s.contentID = wh.contentID
+      AND s.subcontentID = wh.subcontentID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_subcontent_views();
+CREATE OR REPLACE FUNCTION update_gender_based_views()
+RETURNS void AS $$
+BEGIN
+    UPDATE subcontent
+    SET Male_View_Count = 0,
+        Female_View_Count = 0,
+        Others_View_Count = 0;
+    UPDATE subcontent s
+    SET Male_View_Count = gender_views.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE LOWER(u.gender) = 'm'
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS gender_views
+    WHERE s.contentID = gender_views.contentID
+      AND s.subcontentID = gender_views.subcontentID;
+    UPDATE subcontent s
+    SET Female_View_Count = gender_views.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE LOWER(u.gender) = 'f'
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS gender_views
+    WHERE s.contentID = gender_views.contentID
+      AND s.subcontentID = gender_views.subcontentID;
+    UPDATE subcontent s
+    SET Others_View_Count = gender_views.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE LOWER(u.gender) NOT IN ('m', 'f')
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS gender_views
+    WHERE s.contentID = gender_views.contentID
+      AND s.subcontentID = gender_views.subcontentID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_gender_based_views();
+CREATE OR REPLACE FUNCTION update_Likes_Dislikes()
+RETURNS void AS $$
+BEGIN
+	UPDATE SubContent
+	SET Likes=0,Dislikes=0;
+    UPDATE SubContent
+    SET Likes = Content_Views,Dislikes = 0;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_Likes_Dislikes();
+
+
+CREATE OR REPLACE FUNCTION update_content_streamed_region()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM Content_Streamed_Region;
+    INSERT INTO Content_Streamed_Region(Streamed_Region, Count_View, ContentID, SubContentID)
+    SELECT 
+        u.Country AS Streamed_Region,
+        COUNT(*) AS Count_View,
+        c.ContentID,
+        c.SubContentID
+    FROM 
+        Content_Watched_by_User c
+    JOIN 
+        Users u ON c.UserID = u.UserID
+    GROUP BY 
+        u.Country, c.ContentID, c.SubContentID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_content_streamed_region();
+
+
+CREATE OR REPLACE FUNCTION update_Ad_streamed_region()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM Ad_Streamed_Region;
+    INSERT INTO Ad_Streamed_Region(Streamed_Region, Count_View,AdID)
+    SELECT 
+        u.Country AS Streamed_Region,
+        COUNT(*) AS Count_View,
+        c.AdID
+    FROM 
+        Ad_Watched_by_User c
+    JOIN 
+        Users u ON c.UserID = u.UserID
+    GROUP BY 
+        u.Country, c.AdID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_Ad_streamed_region();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION update_gender_based_Ad_views()
+RETURNS void AS $$
+BEGIN
+    UPDATE subcontent
+    SET Male_View_Count = 0,
+        Female_View_Count = 0,
+        Others_View_Count = 0;
+    UPDATE Advertisement s
+    SET Male_View_Count = gender_views.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE LOWER(u.gender) = 'm'
+        GROUP BY wh.AdID
+    ) AS gender_views
+    WHERE s.AdID = gender_views.AdID;
+    UPDATE Advertisement s
+    SET Female_View_Count = gender_views.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE LOWER(u.gender) = 'f'
+        GROUP BY wh.AdID
+    ) AS gender_views
+    WHERE s.AdID = gender_views.AdID;
+    UPDATE Advertisement s
+    SET Others_View_Count = gender_views.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE LOWER(u.gender) = 'o'
+        GROUP BY wh.AdID
+    ) AS gender_views
+    WHERE s.AdID = gender_views.AdID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_gender_based_Ad_views();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION update_Ad_views()
+RETURNS void AS $$
+BEGIN
+    UPDATE Advertisement
+    SET Ad_Views=0;
+    UPDATE Advertisement s
+    SET Ad_Views = wh.view_count
+    FROM (
+        SELECT AdID, COUNT(UserID) AS view_count
+        FROM Ad_Watched_by_User
+        GROUP BY AdID
+    ) AS wh
+    WHERE s.AdID = wh.AdID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_Ad_views();
+
+
+CREATE OR REPLACE FUNCTION update_age_group_views()
+RETURNS void AS $$
+BEGIN
+    UPDATE SubContent
+    SET Age_Under_13_Count = 0,
+        Age_13to18_Count = 0,
+        Age_19to40_Count = 0,
+        Age_41to60_Count = 0,
+        Age_above60_Count = 0;
+    UPDATE subcontent s
+    SET Age_Under_13_Count = agv.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age < 13
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS agv
+    WHERE s.contentID = agv.contentID AND s.subcontentID = agv.subcontentID;
+    UPDATE subcontent s
+    SET Age_13to18_Count = agv.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age >= 13 AND u.age <= 18
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS agv
+    WHERE s.contentID = agv.contentID AND s.subcontentID = agv.subcontentID;
+    UPDATE subcontent s
+    SET Age_19to40_Count = agv.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age >= 19 AND u.age <= 40
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS agv
+    WHERE s.contentID = agv.contentID AND s.subcontentID = agv.subcontentID;
+    UPDATE SubContent s
+    SET Age_41to60_Count = agv.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age >= 41 AND u.age <= 60
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS agv
+    WHERE s.contentID = agv.contentID AND s.subcontentID = agv.subcontentID;
+    UPDATE SubContent s
+    SET Age_above60_Count = agv.view_count
+    FROM (
+        SELECT wh.contentID, wh.subcontentID, COUNT(*) AS view_count
+        FROM Content_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age > 60
+        GROUP BY wh.contentID, wh.subcontentID
+    ) AS agv
+    WHERE s.contentID = agv.contentID AND s.subcontentID = agv.subcontentID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_age_group_views();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION update_age_group_Ad_views()
+RETURNS void AS $$
+BEGIN
+    UPDATE Advertisement
+    SET Age_Under_13_Count = 0,
+        Age_13to18_Count = 0,
+        Age_19to40_Count = 0,
+        Age_41to60_Count = 0,
+        Age_above60_Count = 0;
+    UPDATE Advertisement s
+    SET Age_Under_13_Count = agv.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age < 13
+        GROUP BY wh.AdID
+    ) AS agv
+    WHERE s.AdID = agv.AdID;
+    UPDATE Advertisement s
+    SET Age_13to18_Count = agv.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age >= 13 AND u.age <= 18
+        GROUP BY wh.AdID
+    ) AS agv
+    WHERE s.AdID = agv.AdID;
+    UPDATE Advertisement s
+    SET Age_19to40_Count = agv.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age >= 19 AND u.age <= 40
+        GROUP BY wh.AdID
+    ) AS agv
+    WHERE s.AdID = agv.AdID;
+    UPDATE Advertisement s
+    SET Age_41to60_Count = agv.view_count
+    FROM (
+        SELECT wh.AdID,COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age >= 41 AND u.age <= 60
+        GROUP BY wh.AdID
+    ) AS agv
+    WHERE s.AdID = agv.AdID;
+    UPDATE Advertisement s
+    SET Age_above60_Count = agv.view_count
+    FROM (
+        SELECT wh.AdID, COUNT(*) AS view_count
+        FROM Ad_Watched_by_User wh
+        JOIN Users u ON wh.UserID = u.UserID
+        WHERE u.age > 60
+        GROUP BY wh.AdID
+    ) AS agv
+    WHERE s.AdID = agv.AdID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_age_group_Ad_views();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION update_Skip_Count()
+RETURNS void AS $$
+BEGIN
+    UPDATE Advertisement
+    SET Ad_skips_Count=0;
+    UPDATE Advertisement s
+    SET Ad_skips_Count = wh.view_count
+    FROM (
+        SELECT AdID,COUNT(UserID) AS view_count
+        FROM Ad_Watched_by_User
+	WHERE Lower(Skips_YN)='y'
+        GROUP BY AdID
+    ) AS wh
+    WHERE s.AdID = wh.AdID;
+END;
+$$ LANGUAGE plpgsql;
+SELECT update_Skip_Count();

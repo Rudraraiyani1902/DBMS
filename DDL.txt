@@ -1,0 +1,155 @@
+CREATE SCHEMA CosmoFlix11;
+set search_path to CosmoFlix11;
+CREATE TABLE Users (
+    UserID VARCHAR(10) NOT NULL PRIMARY KEY,
+    Pwd VARCHAR(20) NOT NULL,
+    User_Name VARCHAR(30) NOT NULL,
+    User_EmailID VARCHAR(30) NOT NULL,
+    Age INTEGER,
+    Gender VARCHAR(1),
+    User_PhoneNumber VARCHAR(15),
+    User_type VARCHAR(10) NOT NULL,
+    Preferred_Language VARCHAR(10) DEFAULT 'English',
+    Country VARCHAR(20)
+);
+CREATE TABLE Subscription_Payment_Details(
+    UserID VARCHAR(10) NOT NULL,
+    PaymentID VARCHAR(10) PRIMARY KEY NOT NULL,
+    Payment_Type VARCHAR(10) NOT NULL,
+    Paid_Amount INTEGER NOT NULL,
+    Subscription_Start_Time TIME NOT NULL,
+    Subscription_Start_Date DATE NOT NULL,
+    Tier VARCHAR(10) NOT NULL,
+    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE
+);
+CREATE TABLE Subscription_Tier(
+    Tier VARCHAR(10) NOT NULL PRIMARY KEY,
+    Charges INTEGER NOT NULL,
+    Duration_In_Months INTEGER NOT NULL
+);
+CREATE TABLE Company (
+    CompanyID VARCHAR(10) NOT NULL PRIMARY KEY,
+    CompanyName VARCHAR(30) NOT NULL,
+    CompanyEmailID VARCHAR(30)NOT NULL,
+    Pwd VARCHAR(20) NOT NULL,
+    Country VARCHAR(20) NOT NULL,
+    CompanyPhoneNumber VARCHAR(15) NOT NULL,
+    CompanyType VARCHAR(30) NOT NULL,
+    PointOfContact_Name VARCHAR(30), 
+    PointOfContact_PhoneNumber VARCHAR(15), 
+    PointOfContact_EmailID VARCHAR(30),
+    PointOfContact_Designation VARCHAR(30)
+);
+
+CREATE TABLE Contents (
+    ContentID VARCHAR(10) NOT NULL PRIMARY KEY,
+    Certification VARCHAR(5) NOT NULL,
+    CompanyID VARCHAR(10) NOT NULL,
+    Title VARCHAR(20) NOT NULL,
+    FOREIGN KEY (CompanyID) REFERENCES Company(CompanyID) ON DELETE CASCADE
+);
+CREATE TABLE Genre(
+    ContentID VARCHAR(10) NOT NULL,
+    Genrename VARCHAR(50) NOT NULL,
+    PRIMARY KEY (ContentID,Genrename),
+    FOREIGN KEY (ContentID) REFERENCES Contents(ContentID) ON DELETE CASCADE
+);
+CREATE TABLE Languages (
+    Languages VARCHAR(20) NOT NULL,
+    ContentID VARCHAR(10) NOT NULL,
+    FOREIGN KEY (ContentID) REFERENCES Contents(ContentID) ON DELETE CASCADE,
+    PRIMARY KEY (Languages,ContentID)
+);
+
+CREATE TABLE SubContent (
+    SubContentID VARCHAR(10) NOT NULL,
+    ReleaseDate DATE NOT NULL,
+    Duration TIME NOT NULL,
+    Likes INTEGER, 
+    Dislikes INTEGER,
+    Content_Views INTEGER,
+    Male_View_Count INTEGER,
+    Female_View_Count INTEGER,
+    Others_View_Count INTEGER,
+    Age_Under_13_Count INTEGER,
+    Age_13to18_Count INTEGER,
+    Age_19to40_Count INTEGER,
+    Age_41to60_Count INTEGER,
+    Age_above60_Count INTEGER,
+    ContentID VARCHAR(10) NOT NULL,
+    Episode_Name VARCHAR(50) NOT NULL,
+    Description VARCHAR(500),
+    Video_Clip VARCHAR(100),
+    IMDB DECIMAL(3,1),
+    Content_Tier VARCHAR(10) NOT NULL,
+    FOREIGN KEY (ContentID) REFERENCES Contents(ContentID) ON DELETE CASCADE,
+    PRIMARY KEY (SubContentID,ContentID)
+);
+
+CREATE TABLE Content_Watched_by_User (
+    Date DATE NOT NULL,
+    Time TIME NOT NULL,
+    UserID VARCHAR(10) NOT NULL,
+    SubContentID VARCHAR(10) NOT NULL,
+    ContentID VARCHAR(10) NOT NULL,
+    Reviews   VARCHAR(500),
+    PRIMARY KEY (Date,Time,UserID,SubContentID,ContentID),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE,
+    FOREIGN KEY (SubContentID,ContentID) REFERENCES SubContent(SubContentID,ContentID) ON DELETE CASCADE
+);
+
+
+CREATE TABLE Advertisement (
+    AdID VARCHAR(10) NOT NULL PRIMARY KEY,
+    Ad_Category VARCHAR(20) NOT NULL,
+    Ad_Views INTEGER,
+    Male_View_Count INTEGER,
+    Female_View_Count INTEGER,
+    Others_View_Count INTEGER,
+    Age_Under_13_Count INTEGER,
+    Age_13to18_Count INTEGER,
+    Age_19to40_Count INTEGER,
+    Age_41to60_Count INTEGER,
+    Age_above60_Count INTEGER,
+    Ad_skips_Count INTEGER,
+    CompanyID VARCHAR(10) NOT NULL,
+    advideo VARCHAR(100),
+    FOREIGN KEY (CompanyID) REFERENCES Company(CompanyID) ON DELETE CASCADE
+);
+
+CREATE TABLE Ad_Watched_by_User (
+    Date DATE NOT NULL,
+    Time TIME NOT NULL,
+    AdID VARCHAR(10) NOT NULL,
+    UserID VARCHAR(10) NOT NULL,
+    Skips_YN VARCHAR(1) NOT NULL,
+    PRIMARY KEY (AdID,UserID,Date,Time),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID) ON DELETE CASCADE,
+    FOREIGN KEY (AdID) REFERENCES Advertisement(AdID) ON DELETE CASCADE
+);
+
+
+CREATE TABLE Ad_Streamed_Region (
+    Streamed_Region VARCHAR(50) NOT NULL,
+    Count_View INTEGER,
+    AdID VARCHAR(10) NOT NULL,
+    FOREIGN KEY (AdID) REFERENCES Advertisement(AdID) ON DELETE CASCADE,
+    PRIMARY KEY (AdID,Streamed_Region)
+);
+
+CREATE TABLE Content_Streamed_Region (
+    Streamed_Region VARCHAR(50) NOT NULL,
+    Count_View INTEGER,
+    ContentID VARCHAR(10),
+    SubContentID VARCHAR(10),
+    FOREIGN KEY (SubContentID,ContentID) REFERENCES SubContent(SubContentID,ContentID) ON DELETE CASCADE,
+    PRIMARY KEY(Streamed_Region,ContentID,SubContentID)
+);
+
+CREATE TABLE Casts (
+    CastName VARCHAR(50),
+    ContentID VARCHAR(10),
+    SubContentID VARCHAR(10),
+    FOREIGN KEY (SubContentID,ContentID) REFERENCES SubContent(SubContentID,ContentID) ON DELETE CASCADE,
+    PRIMARY KEY(CastName,SubContentID,ContentID)
+);

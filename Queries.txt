@@ -1,0 +1,189 @@
+---> Medium level query  
+1. Search a movie having rating greater than 8 on IMDB
+
+SELECT Title, Episode_Name, IMDB FROM SubContent  NATURAL JOIN Contents  where 
+IMDB > 8.0; 
+
+2. Top-5 most viewed
+
+SLECT c.Title, SUM(sc.Content_Views) AS Total_Views FROM Contents c NATURAL JOIN 
+SubContent sc GROUP BY c.ContentID, c.Title ORDER BY Total_Views DESC LIMIT 5; 
+
+3. Number of active suscribers 
+
+SELECT COUNT(distinct spd.UserID) AS Active_Subscriber_Count FROM 
+Subscription_Payment_Details spd NATURAL JOIN Subscription_Tier st  WHERE 
+spd.Subscription_Start_Date + (ST.Duration_In_Months * INTERVAL '1 month') >= 
+CURRENT_DATE; 
+
+4. Total Subscription
+SELECT count(*) AS Total_Subscription_Purchases FROM Subscription_Payment_Details; 
+#SPECIFIC::  
+SELECT Tier,count(*) AS Total_Purchases FROM Subscription_Payment_Details GROUP BY 
+Tier; 
+
+5. Content released in a timeline 
+SELECT sc.ReleaseDate, c.Title, sc.Episode_Name FROM SubContent sc NATURAL JOIN 
+Contents c  where sc.ReleaseDate between '2024-01-01' AND '2024-12-31' ORDER BY 
+sc.ReleaseDate; 
+
+6. Last N shows watched by given user (CHANGE VALUE OF N AS PER NEED)
+  
+select wl.Date, wl.Time, c.Title, sc.Episode_Name from content_watched_by_user wl join Contents c on 
+wl.ContentID = c.ContentID join SubContent sc on wl.SubContentID = sc.SubContentID 
+and wl.ContentID = sc.ContentID where wl.UserID = 'U001' order by WL.Date desc, 
+WL.Time desc limit 5;
+
+7. ALL PlAN DETAILS TAKEN BY A USER::
+ 
+select spd.PaymentID, spd.Subscription_Start_Date, spd.Subscription_Start_Time, 
+spd.Payment_Type, spd.Paid_Amount, spd.Tier, st.Duration_In_Months, st.Charges from 
+Subscription_Payment_Details spd NATURAL JOIN  Subscription_Tier ST  where 
+spd.User_ID = 'U009'; 
+
+8. TOP-10 MOST VIEWED AD
+
+select AdID, Ad_Category from Advertisement order by Ad_Views desc limit 10;
+ 
+9. TOP VIEWED AD IN INDIA
+
+select a.AdID, a.Ad_Category, ar.Count_View AS India_Views from Ad_Streamed_Region as 
+ar natural join Advertisement as a where ar.Streamed_Region = 'India' order by 
+ar.Count_View DESC limit 5; 
+
+10. AD WITH MOST MALE AUDIENCE
+ 
+select Adid, Ad_category , Male_view_count from Advertisement order by 
+Male_View_Count desc limit 3;  
+
+11. AD WITH MOST FEMALE AUDIENCE
+ 
+select Adid, Ad_category, female_view_count from Advertisement order by 
+Female_View_Count desc limit 3; 
+
+12. AD WITH MOST THIRD GENDER AUDIENCE
+ 
+select Adid, Ad_category, Others_view_count from Advertisement order by 
+Others_View_Count desc limit 3; 
+
+13. MOST VIEWED AD AMONG CHILDREN
+
+select Adid, Ad_category, age_under_13_count from Advertisement order by 
+age_under_13_count desc limit 3; 
+
+14. MOST VIEWED AD AMONG ADULT
+
+select Adid, Ad_category, age_19to40_count from Advertisement order by 
+age_19to40_count desc limit 3; 
+
+15. MOST VIEWED AD AMONG OLD 
+
+select adid, ad_category, age_41to60_count + age_above60_count as 
+total_views_above_40 from advertisement order by total_views_above_40 desc limit 3; 
+
+16. User that got discount in subscription payment
+
+select spd.userid, u.user_name, spd.tier, spd.paid_amount, st.charges from 
+subscription_payment_details spd natural join subscription_tier st join users u on 
+spd.userid = u.userid where spd.paid_amount < st.charges;
+
+
+
+--> GOOD QUERIES:
+
+1. List Active Subscribers Whose Subscription Will Expire Within the Next 50 Days 
+
+SELECT spd.UserID, u.User_Name, spd.Subscription_Start_Date, st.Duration_In_Months, 
+(spd.Subscription_Start_Date + (st.Duration_In_Months * INTERVAL '1 month')) AS 
+Expiry_Date FROM Subscription_Payment_Details spd JOIN Subscription_Tier st ON 
+spd.Tier = st.Tier JOIN Users u ON u.UserID = spd.UserID WHERE 
+(spd.Subscription_Start_Date + (st.Duration_In_Months * INTERVAL '1 month')) BETWEEN 
+CURRENT_DATE AND CURRENT_DATE + INTERVAL '50 day'; 
+
+2. Get User-wise Watch History Summary (Count, Avg IMDB) 
+
+SELECT wh.UserID, u.User_Name, COUNT(*) AS Total_Watches, round(AVG(SC.IMDB),2) 
+AS Avg_IMDB_Rating FROM CONTENT_WATCHED_BY_USER wh JOIN Users u ON wh.UserID = u.UserID JOIN 
+SubContent sc ON wh.SubContentID = sc.SubContentID AND wh.ContentID = 
+sc.ContentID GROUP BY wh.UserID, u.User_Name ORDER BY Total_Watches DESC; 
+
+3. Most Watched Genre by Female Viewers 
+
+SELECT g.Genrename, SUM(SC.Female_View_Count) AS Total_Female_Views FROM Genre 
+g JOIN Contents c ON g.ContentID = c.ContentID JOIN SubContent sc ON c.ContentID = 
+sc.ContentID GROUP BY g.Genrename ORDER BY Total_Female_Views DESC LIMIT 3; 
+
+4. Identify SubContents That Are Rated High But Have Low Views 
+
+SELECT  sc.Episode_Name, c.Title, sc.IMDB, sc.Content_Views FROM SubContent sc 
+NATURAL JOIN Contents c  WHERE  sc.IMDB > 8.0 AND sc.Content_Views < 10000; 
+
+5. Determine Most Popular Cast Members (Based on SubContent Views) 
+
+SELECT cs.CastName, COUNT(DISTINCT sc.SubContentID) AS Total_Episodes, 
+SUM(sc.Content_Views) AS Total_Views FROM Casts cs JOIN SubContent sc ON 
+cs.SubContentID = sc.SubContentID AND cs.ContentID = sc.ContentID GROUP BY 
+cs.CastName ORDER BY Total_Views DESC LIMIT 5; 
+
+6. Calculate Revenue from Each Tier and Average Duration Users Stay Subscribed 
+
+SELECT spd.Tier, COUNT(DISTINCT spd.UserID) AS Num_Users, SUM(spd.Paid_Amount) 
+AS Total_Revenue, round(AVG(st.Duration_In_Months),2) AS Avg_Duration FROM 
+Subscription_Payment_Details spd NATURAL JOIN Subscription_Tier st GROUP BY spd.Tier;  
+
+7. Top 3 Companies Based on Total Views of Their Content 
+
+SELECT Co.CompanyName, SUM(SC.Content_Views) AS Total_Views FROM Company Co 
+JOIN Contents C ON Co.CompanyID = C.CompanyID JOIN SubContent SC ON C.ContentID 
+= SC.ContentID GROUP BY Co.CompanyName ORDER BY Total_Views DESC LIMIT 3; 
+
+8. Ad Skips to Views Ratio 
+
+SELECT AdID, ad_category, ROUND(100.0 * Ad_skips_Count / NULLIF(Ad_Views, 0), 2) AS 
+Skip_Percentage FROM Advertisement WHERE Ad_Views > 0; 
+
+9. Find the days and date of user activeness 
+
+SELECT wh.UserID, MIN(wh.Date) AS First_Watch, MAX(wh.Date) AS Last_Watch, 
+(MAX(wh.Date) - MIN(wh.Date)) AS Days_Active FROM content_watched_by_user wh GROUP BY 
+wh.UserID ORDER BY Days_Active DESC; 
+
+10. Detect Binge watchers: users that watched multiple episodes of same content in a day::
+
+SELECT wh.UserID, wh.Date, wh.ContentID, COUNT(*) AS Episodes_Watched FROM 
+content_watched_by_user wh GROUP BY wh.UserID, wh.Date, wh.ContentID HAVING COUNT(*) >= 3 
+ORDER BY Episodes_Watched DESC; 
+
+11. Engegement percentage of youngAge users in advertisement
+ 
+SELECT AR.Streamed_Region, A.Ad_Category, A.Age_under_13_Count + 
+A.Age_13to18_Count AS Young_Viewers, A.Ad_Views, ROUND(100.0 * 
+(A.Age_under_13_count + A.age_13to18_count) / NULLIF(A.Ad_Views, 0), 2) AS 
+YoungAge_engagement_Percentage FROM Advertisement A JOIN Ad_Streamed_Region AR 
+ON A.AdID = AR.AdID ORDER BY Youngage_Engagement_Percentage DESC; 
+
+12. SEARCH IN GENERAL::  
+
+SELECT DISTINCT C.Title, SC.Episode_Name, g.genrename FROM Contents C LEFT JOIN 
+SubContent SC ON C.ContentID = SC.ContentID LEFT JOIN Genre G ON C.ContentID = 
+G.ContentID LEFT JOIN Casts CS ON C.ContentID = CS.ContentID AND SC.SubContentID = 
+CS.SubContentID WHERE C.Title ILIKE '%Jane Smith%' OR SC.Episode_Name ILIKE '%Jane 
+Smith%' OR G.Genrename ILIKE '%Jane Smith%' OR CS.CastName ILIKE '%Jane Smith%' 
+
+13. Users Who Never Watched Any Content But Subscribed
+
+SELECT u.UserID, u.User_Name FROM Users u NATURAL JOIN Subscription_Payment_Details 
+LEFT JOIN Content_Watched_by_User cwu ON u.UserID = cwu.UserID WHERE cwu.UserID IS NULL;
+
+14. Top 3 Actors that have collected maximum likes in india
+
+SELECT cs.CastName, SUM(sc.Likes) AS Total_Likes_India FROM Casts cs NATURAL JOIN SubContent sc 
+NATURAL JOIN Content_Streamed_Region csr WHERE csr.Streamed_Region = 'India' GROUP BY cs.CastName
+ORDER BY Total_Likes_India DESC LIMIT 3;
+
+15. Top three actors that are worst suitable for horror genre (extraction based on like to dislike ratio)
+
+SELECT cs.CastName, ROUND(SUM(sc.Likes)::NUMERIC / NULLIF(SUM(sc.Dislikes), 0), 2) AS Like_Dislike_Ratio
+FROM Genre g NATURAL JOIN Contents c NATURAL JOIN SubContent sc 
+NATURAL JOIN Casts cs WHERE g.Genrename ILIKE 'Horror' GROUP BY cs.CastName
+HAVING SUM(sc.Dislikes) > 0 ORDER BY Like_Dislike_Ratio ASC LIMIT 3;
